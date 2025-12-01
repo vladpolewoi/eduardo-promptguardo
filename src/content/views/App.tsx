@@ -4,12 +4,12 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { X as IconX } from 'lucide-react';
 import { useEmails } from '../context/EmailContext';
+import { Logo } from '@/components/Logo';
 import './App.css';
 
 function App() {
   const [show, setShow] = useState(false);
   const { emails, loading } = useEmails();
-  const logoUrl = chrome.runtime.getURL('public/logo-128.png');
 
   useEffect(() => {
     // Listen for new email detections
@@ -61,11 +61,13 @@ function App() {
       <div className="fixed bottom-6 right-6 z-[10000]">
         <button
           onClick={() => setShow(!show)}
-          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg hover:shadow-xl transition-shadow"
+          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg hover:shadow-xl transition-all hover:scale-105"
         >
-          <img src={logoUrl} alt="Eduardo" className="w-full h-full object-contain" />
+          <Logo className="w-8 h-8 text-white" />
           {emails.length > 0 && (
-            <Badge className="absolute -right-1 -top-1 h-5 min-w-5 px-1">{emails.length}</Badge>
+            <Badge className="bg-red-400 absolute -right-1 -top-1 h-5 min-w-5 px-1">
+              {emails.length}
+            </Badge>
           )}
         </button>
       </div>
@@ -73,17 +75,17 @@ function App() {
       {/* Modal */}
       {show && (
         <div
-          className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/50"
+          className="modal-backdrop fixed inset-0 z-[10001] bg-black/50"
           onClick={() => setShow(false)}
         >
           <Card
-            className="w-[560px] max-h-[75vh] overflow-auto shadow-xl"
+            className="bg-secondary border-border modal-card fixed bottom-24 right-6 w-[560px] max-h-[75vh] overflow-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-4 text-lg">
-                  <img src={logoUrl} alt="Eduardo" className="w-12 h-12 object-contain" />
+                  <Logo className="w-10 h-12 text-primary" />
                   <div className="text-xl font-semibold text-foreground">Eduardo Prompt-Guardo</div>
                 </CardTitle>
                 <button
