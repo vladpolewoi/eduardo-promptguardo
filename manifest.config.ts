@@ -7,11 +7,15 @@ export default defineManifest({
   description: 'Monitor and anonymize email in ChatGPT prompts',
   version: pkg.version,
   icons: {
-    48: 'public/logo.png',
+    16: 'public/logo-16.png',
+    48: 'public/logo-48.png',
+    128: 'public/logo-128.png',
   },
   action: {
     default_icon: {
-      48: 'public/logo.png',
+      16: 'public/logo-16.png',
+      48: 'public/logo-48.png',
+      128: 'public/logo-128.png',
     },
     default_popup: 'src/popup/index.html',
   },
