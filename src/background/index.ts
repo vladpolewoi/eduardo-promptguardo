@@ -7,6 +7,31 @@ console.log('Service worker initialized');
 
 // Email detection regex
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+const STORAGE_KEY = 'detectedEmails';
+
+async function loadDetectedEmails(): Promise<Record<string, boolean>> {
+  const result = await chrome.storage.local.get(STORAGE_KEY);
+  return (result[STORAGE_KEY] as Record<string, boolean>) || {};
+}
+
+async function addDetectedEmails(newEmails: string[]): Promise<void> {
+  const stored = await loadDetectedEmails();
+  console.log('STORED', stored);
+  let hasNew = false;
+
+  newEmails.forEach((email) => {
+    if (!stored[email]) {
+      stored[email] = true;
+      hasNew = true;
+      console.log(`[SW] New email detected and stored: ${email}`);
+    }
+  });
+
+  if (hasNew) {
+    await chrome.storage.local.set({ [STORAGE_KEY]: stored });
+    console.log('[SW] Total emails stored:', Object.keys(stored).length);
+  }
+}
 
 function anonymizeText(text: string): { anonymized: string; emails: string[] } {
   const emails = new Set<string>();
@@ -37,6 +62,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       const { emails, anonymized } = anonymizeText(textPart);
 
       console.log('[SW] Detection result:', { emails, anonymized });
+
+      // Store detected emails
+      if (emails.length > 0) {
+        addDetectedEmails(emails).catch((err) => {
+          console.error('[SW] Error storing emails:', err);
+        });
+      }
 
       sendResponse({
         emails: emails,
