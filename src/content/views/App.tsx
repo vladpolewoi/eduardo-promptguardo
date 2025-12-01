@@ -1,6 +1,7 @@
 import Logo from '@/assets/crx.svg';
 import { useState, useEffect } from 'react';
 import './App.css';
+import { Button } from '@/components/ui/button';
 
 function App() {
   const [show, setShow] = useState(false);
@@ -38,6 +39,10 @@ function App() {
             )}
 
             <p>Total: {emails.length}</p>
+
+            <Button variant="ghost" onClick={toggle}>
+              Close
+            </Button>
           </div>
         </div>
       )}
