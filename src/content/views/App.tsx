@@ -3,37 +3,21 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { X as IconX } from 'lucide-react';
+import { useEmails } from '../context/EmailContext';
 import './App.css';
-
-interface EmailEntry {
-  email: string;
-  timestamp: number;
-  dismissed?: number;
-}
 
 function App() {
   const [show, setShow] = useState(false);
-  const [emails, setEmails] = useState<EmailEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { emails, loading } = useEmails();
   const logoUrl = chrome.runtime.getURL('public/logo-128.png');
 
-  const loadEmails = async () => {
-    const result = (await chrome.storage.local.get('detectedEmails')) as {
-      detectedEmails: EmailEntry[];
-    };
-    const detectedEmails = result.detectedEmails || [];
-    setEmails(detectedEmails);
-    setLoading(false);
-  };
-
   useEffect(() => {
-    loadEmails();
-
     // Listen for new email detections
-    window.addEventListener('EMAIL_DETECTED', () => {
-      loadEmails();
-      setShow(true); // Auto-show modal when email detected
-    });
+    const handleEmailDetected = () => {
+      setShow(true);
+    };
+
+    window.addEventListener('EMAIL_DETECTED', handleEmailDetected);
 
     // Apply system theme
     const applyTheme = () => {
@@ -56,6 +40,7 @@ function App() {
     darkModeQuery.addEventListener('change', handleThemeChange);
 
     return () => {
+      window.removeEventListener('EMAIL_DETECTED', handleEmailDetected);
       darkModeQuery.removeEventListener('change', handleThemeChange);
     };
   }, []);

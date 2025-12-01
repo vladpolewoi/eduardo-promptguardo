@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './views/App.tsx';
+import { EmailProvider } from './context/EmailContext.tsx';
 
 console.log('[Content Script] Initialized');
 
@@ -38,7 +39,9 @@ container.id = 'crxjs-app';
 document.body.appendChild(container);
 createRoot(container).render(
   <StrictMode>
-    <App />
+    <EmailProvider>
+      <App />
+    </EmailProvider>
   </StrictMode>,
 );
 
