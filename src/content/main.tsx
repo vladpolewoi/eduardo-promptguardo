@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './views/App.tsx';
+import { EmailProvider } from './context/EmailContext.tsx';
 
 console.log('[Content Script] Initialized');
 
@@ -26,6 +27,17 @@ window.addEventListener('message', (event) => {
       })
       .then((response) => {
         console.log('[Content Script] SW response:', response);
+
+        // New eVent with emails detected
+        if (response.emails && response.emails.length > 0) {
+          console.log('[Content Script] Dispatching EMAIL_DETECTED event with:', response.emails);
+
+          window.dispatchEvent(
+            new CustomEvent('EMAIL_DETECTED', {
+              detail: { emails: response.emails },
+            }),
+          );
+        }
       })
       .catch((err) => {
         console.error('[Content Script] SW error:', err);
@@ -38,7 +50,9 @@ container.id = 'crxjs-app';
 document.body.appendChild(container);
 createRoot(container).render(
   <StrictMode>
-    <App />
+    <EmailProvider>
+      <App />
+    </EmailProvider>
   </StrictMode>,
 );
 

@@ -1,40 +1,24 @@
 import { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { X as IconX } from 'lucide-react';
+import { useEmails } from '../context/EmailContext';
+import { Logo } from '@/components/Logo';
 import './App.css';
-
-interface EmailEntry {
-  email: string;
-  timestamp: number;
-  dismissed?: number;
-}
 
 function App() {
   const [show, setShow] = useState(false);
-  const [emails, setEmails] = useState<EmailEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const logoUrl = chrome.runtime.getURL('public/logo-128.png');
+  const { emails, currentIssues, loading } = useEmails();
 
-  const loadEmails = async () => {
-    const result = (await chrome.storage.local.get('detectedEmails')) as {
-      detectedEmails: EmailEntry[];
-    };
-    const detectedEmails = result.detectedEmails || [];
-    setEmails(detectedEmails);
-    setLoading(false);
-  };
+  // Auto-show modal when emails are detected
+  useEffect(() => {
+    if (currentIssues.length > 0) {
+      setShow(true);
+    }
+  }, [currentIssues]);
 
   useEffect(() => {
-    loadEmails();
-
-    // Listen for new email detections
-    window.addEventListener('EMAIL_DETECTED', () => {
-      loadEmails();
-      setShow(true); // Auto-show modal when email detected
-    });
-
     // Apply system theme
     const applyTheme = () => {
       const root = document.getElementById('crxjs-app');
@@ -76,29 +60,26 @@ function App() {
       <div className="fixed bottom-6 right-6 z-[10000]">
         <button
           onClick={() => setShow(!show)}
-          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg hover:shadow-xl transition-shadow"
+          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg hover:shadow-xl transition-all hover:scale-105"
         >
-          <img src={logoUrl} alt="Eduardo" className="w-full h-full object-contain" />
-          {emails.length > 0 && (
-            <Badge className="absolute -right-1 -top-1 h-5 min-w-5 px-1">{emails.length}</Badge>
-          )}
+          <Logo className="w-8 h-8 text-white" />
         </button>
       </div>
 
       {/* Modal */}
       {show && (
         <div
-          className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/50"
+          className="modal-backdrop fixed inset-0 z-[10001] bg-black/50"
           onClick={() => setShow(false)}
         >
           <Card
-            className="w-[560px] max-h-[75vh] overflow-auto shadow-xl"
+            className="bg-secondary border-border modal-card fixed bottom-24 right-6 w-[560px] min-h-[600px] max-h-[600px] flex flex-col shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-4 text-lg">
-                  <img src={logoUrl} alt="Eduardo" className="w-12 h-12 object-contain" />
+                  <Logo className="w-10 h-12 text-primary" />
                   <div className="text-xl font-semibold text-foreground">Eduardo Prompt-Guardo</div>
                 </CardTitle>
                 <button
@@ -110,43 +91,48 @@ function App() {
               </div>
             </CardHeader>
 
-            <CardContent>
-              <Tabs defaultValue="detected">
-                <TabsList className="w-full">
-                  <TabsTrigger value="detected" className="flex-1">
-                    Detected
+            <CardContent className="flex-1 flex flex-col overflow-hidden">
+              <Tabs defaultValue="issues" className="h-full flex flex-col">
+                <TabsList className="w-full flex-shrink-0">
+                  <TabsTrigger value="issues" className="flex-1">
+                    Issues Found
                   </TabsTrigger>
                   <TabsTrigger value="history" className="flex-1">
                     History
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="detected" className="mt-4">
+                <TabsContent value="issues" className="mt-4 flex-1 overflow-hidden">
                   {loading ? (
                     <p className="text-center text-muted-foreground py-8 text-sm">Loading...</p>
-                  ) : emails.length === 0 ? (
+                  ) : currentIssues.length === 0 ? (
                     <div className="text-center py-16">
-                      <p className="text-4xl mb-3">🌵</p>
-                      <p className="text-sm text-muted-foreground">No emails detected yet</p>
+                      <p className="text-4xl mb-3">✅</p>
+                      <p className="text-sm text-muted-foreground">
+                        No issues found in current prompt
+                      </p>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       <p className="text-xs text-muted-foreground mb-3">
-                        {emails.length} email{emails.length > 1 ? 's' : ''} detected
+                        {currentIssues.length} email{currentIssues.length > 1 ? 's' : ''} found in
+                        current prompt
                       </p>
-                      {emails.map((entry) => (
-                        <div
-                          key={entry.email}
-                          className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                        >
-                          <div className="font-mono text-xs">{entry.email}</div>
-                        </div>
-                      ))}
+                      <ScrollArea className="h-[200px]">
+                        {currentIssues.map((email) => (
+                          <div
+                            key={email}
+                            className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                          >
+                            <div className="font-mono text-xs">{email}</div>
+                          </div>
+                        ))}
+                      </ScrollArea>
                     </div>
                   )}
                 </TabsContent>
 
-                <TabsContent value="history" className="mt-4">
+                <TabsContent value="history" className="mt-4 flex-1 overflow-hidden">
                   {loading ? (
                     <p className="text-center text-muted-foreground py-8 text-sm">Loading...</p>
                   ) : emails.length === 0 ? (
@@ -159,24 +145,27 @@ function App() {
                       <p className="text-xs text-muted-foreground mb-3">
                         All detected emails ({emails.length} total)
                       </p>
-                      {emails
-                        .slice()
-                        .sort((a, b) => b.timestamp - a.timestamp)
-                        .map((entry) => (
-                          <div
-                            key={entry.email + entry.timestamp}
-                            className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="font-mono text-xs flex-1 break-all">
-                                {entry.email}
-                              </div>
-                              <div className="text-xs text-muted-foreground whitespace-nowrap">
-                                {formatDate(entry.timestamp)}
+
+                      <ScrollArea className="h-[400px]">
+                        {emails
+                          .slice()
+                          .sort((a, b) => b.timestamp - a.timestamp)
+                          .map((entry) => (
+                            <div
+                              key={entry.email + entry.timestamp}
+                              className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="font-mono text-xs flex-1 break-all">
+                                  {entry.email}
+                                </div>
+                                <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                  {formatDate(entry.timestamp)}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                      </ScrollArea>
                     </div>
                   )}
                 </TabsContent>

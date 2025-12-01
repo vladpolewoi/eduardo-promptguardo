@@ -7,42 +7,47 @@ console.log('Service worker initialized');
 
 // Email detection regex
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-const STORAGE_KEY = 'detectedEmails';
+const STORAGE_KEY = 'detectionHistory';
 
 interface EmailEntry {
   email: string;
   timestamp: number;
-  dismissed?: number; // timestamp when dismissed, undefined if not dismissed
+  dismissed?: number;
 }
 
-async function loadDetectedEmails(): Promise<EmailEntry[]> {
+async function loadDetectionHistory(): Promise<EmailEntry[]> {
   const result = await chrome.storage.local.get(STORAGE_KEY);
   return (result[STORAGE_KEY] as EmailEntry[]) || [];
 }
 
-async function addDetectedEmails(newEmails: string[]): Promise<void> {
-  const stored = await loadDetectedEmails();
-  console.log('[SW] Current stored emails:', stored);
-  let hasNew = false;
+async function logDetectedEmails(emails: string[]): Promise<string[]> {
+  const history = await loadDetectionHistory();
+  console.log('[SW] Current history length:', history.length);
 
-  newEmails.forEach((email) => {
-    // Check if email already exists (case-insensitive deduplication)
-    const exists = stored.some((entry) => entry.email.toLowerCase() === email.toLowerCase());
+  const timestamp = Date.now();
+  const normalizedEmails: string[] = [];
 
-    if (!exists) {
-      stored.push({
-        email: email.toLowerCase(),
-        timestamp: Date.now(),
-      });
-      hasNew = true;
-      console.log(`[SW] New email detected and stored: ${email}`);
-    }
+  // Log EVERY occurrence to history
+  emails.forEach((email) => {
+    const normalizedEmail = email.toLowerCase();
+
+    history.push({
+      email: normalizedEmail,
+      timestamp,
+    });
+
+    normalizedEmails.push(normalizedEmail);
+
+    console.log(`[SW] Email logged to history: ${email}`);
   });
 
-  if (hasNew) {
-    await chrome.storage.local.set({ [STORAGE_KEY]: stored });
-    console.log('[SW] Total emails stored:', stored.length);
+  // Save updated history
+  if (normalizedEmails.length > 0) {
+    await chrome.storage.local.set({ [STORAGE_KEY]: history });
+    console.log('[SW] Total detections in history:', history.length);
   }
+
+  return normalizedEmails;
 }
 
 function anonymizeText(text: string): { anonymized: string; emails: string[] } {
@@ -63,36 +68,38 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   console.log('[SW] Received message:', message);
 
   if (message.type === 'ANALYZE_PROMPT') {
-    try {
-      // REFACTOR: Extracting the prompt from the message
-      const body = JSON.parse(message.payload?.body) || message.payload?.body;
-      const parts = body?.messages?.[0]?.content?.parts;
-      console.log('PATS', parts, body);
-      const textPart = parts?.find((part: any) => typeof part === 'string');
-      console.log('[SW] Extracted prompt:', textPart);
+    // Handle async processing
+    (async () => {
+      try {
+        // REFACTOR: Extracting the prompt from the message
+        const body = JSON.parse(message.payload?.body) || message.payload?.body;
+        const parts = body?.messages?.[0]?.content?.parts;
+        console.log('PATS', parts, body);
+        const textPart = parts?.find((part: any) => typeof part === 'string');
+        console.log('[SW] Extracted prompt:', textPart);
 
-      const { emails, anonymized } = anonymizeText(textPart);
+        const { emails, anonymized } = anonymizeText(textPart);
 
-      console.log('[SW] Detection result:', { emails, anonymized });
+        console.log('[SW] Detection result:', { emails, anonymized });
 
-      // Store detected emails
-      if (emails.length > 0) {
-        addDetectedEmails(emails).catch((err) => {
-          console.error('[SW] Error storing emails:', err);
+        // Log detected emails to history and get normalized list
+        let detectedEmails: string[] = [];
+        if (emails.length > 0) {
+          detectedEmails = await logDetectedEmails(emails);
+        }
+
+        sendResponse({
+          emails: detectedEmails,
+          originalText: textPart,
+          anonymizedText: anonymized,
         });
+      } catch (error) {
+        console.error('[SW] Error processing message:', error);
+        sendResponse({ success: false, error: String(error) });
       }
+    })();
 
-      sendResponse({
-        emails: emails,
-        originalText: textPart,
-        anonymizedText: anonymized,
-      });
-    } catch (error) {
-      console.error('[SW] Error processing message:', error);
-      sendResponse({ success: false, error: String(error) });
-    }
-
-    return true;
+    return true; // Keep the message channel open for async response
   }
 
   sendResponse({ success: false, error: 'Unknown message type' });
