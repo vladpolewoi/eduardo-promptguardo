@@ -5,16 +5,24 @@ import { Badge } from '@/components/ui/badge';
 import { X as IconX } from 'lucide-react';
 import './App.css';
 
+interface EmailEntry {
+  email: string;
+  timestamp: number;
+  dismissed?: number;
+}
+
 function App() {
   const [show, setShow] = useState(false);
-  const [emails, setEmails] = useState<string[]>([]);
+  const [emails, setEmails] = useState<EmailEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const logoUrl = chrome.runtime.getURL('public/logo-128.png');
 
   const loadEmails = async () => {
-    const result = await chrome.storage.local.get('detectedEmails');
-    const detectedEmails = result.detectedEmails || {};
-    setEmails(Object.keys(detectedEmails));
+    const result = (await chrome.storage.local.get('detectedEmails')) as {
+      detectedEmails: EmailEntry[];
+    };
+    const detectedEmails = result.detectedEmails || [];
+    setEmails(detectedEmails);
     setLoading(false);
   };
 
@@ -51,6 +59,16 @@ function App() {
       darkModeQuery.removeEventListener('change', handleThemeChange);
     };
   }, []);
+
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   return (
     <>
@@ -116,12 +134,12 @@ function App() {
                       <p className="text-xs text-muted-foreground mb-3">
                         {emails.length} email{emails.length > 1 ? 's' : ''} detected
                       </p>
-                      {emails.map((email) => (
+                      {emails.map((entry) => (
                         <div
-                          key={email}
-                          className="p-3 bg-muted/50 rounded-lg font-mono text-xs hover:bg-muted transition-colors"
+                          key={entry.email}
+                          className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
                         >
-                          {email}
+                          <div className="font-mono text-xs">{entry.email}</div>
                         </div>
                       ))}
                     </div>
@@ -129,10 +147,38 @@ function App() {
                 </TabsContent>
 
                 <TabsContent value="history" className="mt-4">
-                  <div className="text-center py-16">
-                    <p className="text-4xl mb-3">📜</p>
-                    <p className="text-sm text-muted-foreground">History coming soon</p>
-                  </div>
+                  {loading ? (
+                    <p className="text-center text-muted-foreground py-8 text-sm">Loading...</p>
+                  ) : emails.length === 0 ? (
+                    <div className="text-center py-16">
+                      <p className="text-4xl mb-3">📜</p>
+                      <p className="text-sm text-muted-foreground">No history yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground mb-3">
+                        All detected emails ({emails.length} total)
+                      </p>
+                      {emails
+                        .slice()
+                        .sort((a, b) => b.timestamp - a.timestamp)
+                        .map((entry) => (
+                          <div
+                            key={entry.email + entry.timestamp}
+                            className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="font-mono text-xs flex-1 break-all">
+                                {entry.email}
+                              </div>
+                              <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                {formatDate(entry.timestamp)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </CardContent>
