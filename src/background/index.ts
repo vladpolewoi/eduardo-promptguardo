@@ -1,71 +1,32 @@
-import { processAllTextInBody } from '../shared';
-import { anonymizeText } from './utils/anonymization';
+import { MessageType } from '@/shared';
+
 import { EmailHistoryRepository } from './repositories/EmailHistoryRepository';
+import { EmailDetectionService } from './services/EmailDetectionService';
 
-console.log('Service worker initialized');
-
-// Initialize repository
 const emailHistoryRepository = new EmailHistoryRepository();
+const emailDetectionService = new EmailDetectionService(emailHistoryRepository);
 
-// Listen for messages from content script
+async function handleAnalyzePrompt(payload: any, sendResponse: (response: any) => void) {
+  try {
+    const response = await emailDetectionService.analyzePrompt(payload);
+
+    sendResponse(response);
+  } catch (error) {
+    console.error('[SW] Error processing ANALYZE_PROMPT:', error);
+
+    sendResponse({ success: false, error: String(error) });
+  }
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  console.log('[SW] Received message:', message);
+  if (message.type === MessageType.ANALYZE_PROMPT) {
+    handleAnalyzePrompt(message.payload, sendResponse);
 
-  if (message.type === 'ANALYZE_PROMPT') {
-    // Handle async processing
-    (async () => {
-      try {
-        const bodyString = message.payload?.body;
-
-        if (!bodyString || typeof bodyString !== 'string') {
-          throw new Error('Invalid body - expected string');
-        }
-
-        // Collect all detected emails from all text parts
-        const allDetectedEmails: string[] = [];
-
-        // Process each text part in the body independently
-        const anonymizedBody = processAllTextInBody(bodyString, (text) => {
-          console.log('[SW] Processing text part:', text.substring(0, 100) + '...');
-
-          // Detect and anonymize emails in this text part
-          const { emails, anonymized } = anonymizeText(text);
-
-          // Collect emails from this part
-          if (emails.length > 0) {
-            allDetectedEmails.push(...emails);
-          }
-
-          return anonymized;
-        });
-
-        console.log('[SW] Total emails detected:', allDetectedEmails);
-
-        // Log all detected emails to history and get normalized list
-        let detectedEmails: string[] = [];
-        if (allDetectedEmails.length > 0) {
-          detectedEmails = await emailHistoryRepository.addEntries(allDetectedEmails);
-        }
-
-        sendResponse({
-          emails: detectedEmails,
-          anonymizedBody: anonymizedBody, // Return full transformed body
-        });
-      } catch (error) {
-        console.error('[SW] Error processing message:', error);
-        sendResponse({ success: false, error: String(error) });
-      }
-    })();
-
-    return true; // Keep the message channel open for async response
+    // Keep the message channel open for async response
+    return true;
   }
 
   sendResponse({ success: false, error: 'Unknown message type' });
   return true;
-});
-
-// Extension installation/update handler
-chrome.runtime.onInstalled.addListener((details) => {
-  console.log('Extension installed/updated:', details.reason);
 });
 
