@@ -1,10 +1,5 @@
-/**
- * FetchInterceptor
- * Intercepts fetch requests to ChatGPT API and anonymizes email addresses
- * Uses InjectMessenger for communication with content script
- */
-
 // import { injectMessenger } from './InjectMessenger';
+import { MessageType } from '../../shared';
 
 type SomeUrl = string | URL | Request;
 
@@ -16,7 +11,7 @@ export interface InterceptorConfig {
 export class FetchInterceptor {
   private readonly originalFetch: typeof window.fetch;
   private readonly config: InterceptorConfig;
-  // private requestIdCounter = 0;
+  private requestIdCounter = 0;
   private pendingRequests = new Map<number, (body: string) => void>();
 
   constructor(config: InterceptorConfig) {
@@ -53,51 +48,54 @@ export class FetchInterceptor {
 
     if (!body || typeof body !== 'string') {
       console.warn('[FetchInterceptor] No body or non-string body, skipping');
+
       return this.originalFetch.apply(window, args);
     }
 
-    console.log('[FetchInterceptor] Intercepting ChatGPT API call', input);
+    try {
+      const anonymizedBody = await this.requestAnonymization(body);
 
-    // try {
-    //   // Request anonymization from content script
-    //   const anonymizedBody = await this.requestAnonymization(body);
-    //
-    //   // Create modified request with anonymized body
-    //   const modifiedInit: RequestInit = {
-    //     ...init,
-    //     body: anonymizedBody,
-    //   };
-    //
-    //   console.log('[FetchInterceptor] Sending request with anonymized body');
-    // return this.originalFetch.call(window, input, modifiedInit);
-    // } catch (error) {
-    //   console.error('[FetchInterceptor] Error during anonymization:', error);
-    return this.originalFetch.apply(window, args);
-    // }
+      const modifiedInit: RequestInit = {
+        ...init,
+        body: anonymizedBody,
+      };
+
+      return this.originalFetch.call(window, input, modifiedInit);
+    } catch (error) {
+      console.error('[FetchInterceptor] Error during anonymization:', error);
+
+      return this.originalFetch.apply(window, args);
+    }
   }
 
-  /**
-   * Request anonymization from content script via InjectMessenger
-   */
-  // private async requestAnonymization(body: string): Promise<string> {
-  //   const requestId = this.requestIdCounter++;
-  //
-  //   return new Promise<string>((resolve) => {
-  //     this.pendingRequests.set(requestId, resolve);
-  //
-  //     // Send request via InjectMessenger
-  //     injectMessenger.sendChatGPTRequest(requestId, body);
-  //
-  //     // Timeout fallback
-  //     setTimeout(() => {
-  //       if (this.pendingRequests.has(requestId)) {
-  //         console.warn(`[FetchInterceptor] Request ${requestId} timed out`);
-  //         this.pendingRequests.delete(requestId);
-  //         resolve(body); // Use original body
-  //       }
-  //     }, this.config.requestTimeout);
-  //   });
-  // }
+  private async requestAnonymization(body: string): Promise<string> {
+    const requestId = this.requestIdCounter++;
+
+    return new Promise<string>((resolve) => {
+      this.pendingRequests.set(requestId, resolve);
+
+      // Send to SW
+      window.postMessage(
+        {
+          type: MessageType.CHATGPT_REQUEST,
+          requestId,
+          body,
+        },
+        '*',
+      );
+
+      // If timeout fallback to original body
+      setTimeout(() => {
+        if (this.pendingRequests.has(requestId)) {
+          console.warn(`[FetchInterceptor] Request ${requestId} timed out`);
+
+          this.pendingRequests.delete(requestId);
+
+          resolve(body);
+        }
+      }, this.config.requestTimeout);
+    });
+  }
 
   // Helpers
   private shouldIntercept(url: string): boolean {

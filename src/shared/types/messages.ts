@@ -4,11 +4,8 @@ export const MessageType = {
   EMAIL_DETECTED: 'EMAIL_DETECTED',
 } as const;
 
-export type MessageTypeKeys = keyof typeof MessageType;
-export type MessageTypeValues = (typeof MessageType)[MessageTypeKeys];
-
-// Messages
-export interface ChatGPTRequestMessage {
+// Payloads
+export interface ChatGPTRequestMessagePayload {
   type: typeof MessageType.CHATGPT_REQUEST;
   requestId: number;
   body: string;
@@ -20,10 +17,16 @@ export interface AnonymizationResponseMessage {
   anonymizedBody: string;
 }
 
-export type WindowMessage = ChatGPTRequestMessage | AnonymizationResponseMessage;
-
-// Events
 export interface EmailDetectedEvent {
   emails: string[];
 }
+//---
+
+export type MessagePayloads = {
+  [MessageType.CHATGPT_REQUEST]: ChatGPTRequestMessagePayload;
+};
+
+export type WindowMessage = {
+  [K in keyof MessagePayloads]: { type: K } & MessagePayloads[K];
+}[keyof MessagePayloads];
 

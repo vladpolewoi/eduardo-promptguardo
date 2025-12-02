@@ -1,4 +1,5 @@
 import { createContext, useContext, useCallback, useState, useEffect, ReactNode } from 'react';
+import { MessageType, type EmailDetectedEvent } from '@/shared/types/messages';
 
 export interface EmailEntry {
   email: string;
@@ -128,10 +129,10 @@ export function EmailProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Listen for EMAIL_DETECTED custom event from content script
+  // Listen for EMAIL_DETECTED CustomEvent
   useEffect(() => {
     const handleEmailDetected = (event: Event) => {
-      const customEvent = event as CustomEvent<{ emails: string[] }>;
+      const customEvent = event as CustomEvent<EmailDetectedEvent>;
       const detectedEmails = customEvent.detail.emails;
 
       console.log('[EmailContext] Emails detected in current prompt:', detectedEmails);
@@ -147,10 +148,10 @@ export function EmailProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    window.addEventListener('EMAIL_DETECTED', handleEmailDetected);
+    window.addEventListener(MessageType.EMAIL_DETECTED, handleEmailDetected);
 
     return () => {
-      window.removeEventListener('EMAIL_DETECTED', handleEmailDetected);
+      window.removeEventListener(MessageType.EMAIL_DETECTED, handleEmailDetected);
     };
   }, [isEmailDismissed]);
 
