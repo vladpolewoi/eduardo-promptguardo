@@ -34,7 +34,7 @@ export default defineManifest({
   ],
   web_accessible_resources: [
     {
-      resources: ['inject.js', 'public/logo.svg'],
+      resources: ['public/inject.js', 'public/logo.svg'],
       matches: ['https://chatgpt.com/*', 'https://chat.openai.com/*'],
     },
   ],

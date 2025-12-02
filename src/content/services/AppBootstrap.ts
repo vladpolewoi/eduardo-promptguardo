@@ -16,7 +16,7 @@ class AppBootstrap {
   private injectPageScript() {
     injectScript({
       id: 'crx-inject-script',
-      src: chrome.runtime.getURL('src/inject/index.ts'),
+      src: chrome.runtime.getURL('public/inject.js'),
     });
   }
 
