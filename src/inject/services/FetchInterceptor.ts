@@ -1,5 +1,4 @@
-// import { injectMessenger } from './InjectMessenger';
-import { MessageType } from '../../shared';
+import { MessageType } from './../../shared/types';
 
 type SomeUrl = string | URL | Request;
 
@@ -17,7 +16,7 @@ export class FetchInterceptor {
   constructor(config: InterceptorConfig) {
     this.originalFetch = window.fetch;
     this.config = config;
-    // this.setupResponseListener();
+    this.setupResponseListener();
   }
 
   install(): void {
@@ -26,22 +25,25 @@ export class FetchInterceptor {
 
   uninstall(): void {
     window.fetch = this.originalFetch;
-
     this.pendingRequests.clear();
   }
 
-  //  * Setup listener for anonymization responses from content script
-  //  */
-  // private setupResponseListener(): void {
-  //   injectMessenger.onAnonymizationResponse((payload) => {
-  //     const resolver = this.pendingRequests.get(payload.requestId);
-  //     if (resolver) {
-  //       resolver(payload.anonymizedBody);
-  //       this.pendingRequests.delete(payload.requestId);
-  //     }
-  //   });
-  // }
-  //
+  // Setup listener for anonymization responses from content script
+  private setupResponseListener(): void {
+    window.addEventListener('message', (event: MessageEvent) => {
+      if (event.data.type === MessageType.ANONYMIZATION_RESPONSE) {
+        const { requestId, anonymizedBody } = event.data;
+        const resolver = this.pendingRequests.get(requestId);
+
+        if (resolver) {
+          resolver(anonymizedBody);
+
+          this.pendingRequests.delete(requestId);
+        }
+      }
+    });
+  }
+
   private async handleInterceptedRequest(args: Parameters<typeof window.fetch>): Promise<Response> {
     const [input, init] = args;
     const body = init?.body;

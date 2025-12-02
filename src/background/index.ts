@@ -1,12 +1,16 @@
-import { MessageType } from '@/shared';
+import { MessageType } from '@/shared/types';
+import { EmailHistoryRepository } from '@/shared/repositories';
+import type { AnalyzePromptResponse } from './services/EmailDetectionService';
 
-import { EmailHistoryRepository } from './repositories/EmailHistoryRepository';
-import { EmailDetectionService } from './services/EmailDetectionService';
+import { EmailDetectionService, AnalyzePromptPayload } from './services/EmailDetectionService';
 
 const emailHistoryRepository = new EmailHistoryRepository();
 const emailDetectionService = new EmailDetectionService(emailHistoryRepository);
 
-async function handleAnalyzePrompt(payload: any, sendResponse: (response: any) => void) {
+async function handleAnalyzePrompt(
+  payload: AnalyzePromptPayload,
+  sendResponse: (response: AnalyzePromptResponse | { success: false; error: string }) => void,
+) {
   try {
     const response = await emailDetectionService.analyzePrompt(payload);
 
