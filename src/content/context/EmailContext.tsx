@@ -1,11 +1,6 @@
 import { createContext, useContext, useCallback, useState, useEffect, ReactNode } from 'react';
-import { MessageType, type EmailDetectedEvent } from '@/shared/types/messages';
-
-export interface EmailEntry {
-  email: string;
-  timestamp: number;
-  dismissed?: number;
-}
+import { MessageType, type EmailEntry } from '@/shared';
+import { type EmailDetectedEvent } from '@/shared/types/messages';
 
 interface EmailContextType {
   emails: EmailEntry[];

@@ -1,5 +1,5 @@
 import { STORAGE_KEY } from '../config/constants';
-import { EmailEntry } from '../entities/EmailEntry.entity';
+import { EmailEntry } from '@/shared';
 
 export class EmailHistoryRepository {
   async loadHistory(): Promise<EmailEntry[]> {
