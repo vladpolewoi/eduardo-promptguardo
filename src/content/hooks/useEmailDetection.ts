@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MessageType, type EmailDetectedEvent } from '@/shared/types';
 import { type DismissedEmails } from '@/shared/repositories';
-import { isEmailDismissed as checkIsEmailDismissed } from '@/shared/utils';
+import { isEmailDismissed } from '@/shared/utils';
 
 export function useEmailDetection(dismissedEmails: DismissedEmails) {
   const [currentIssues, setCurrentIssues] = useState<string[]>([]);
@@ -21,7 +21,7 @@ export function useEmailDetection(dismissedEmails: DismissedEmails) {
       const nonDismissedEmails = detectedEmails.filter((email) => {
         const dismissedAt = dismissedEmails[email.toLowerCase()];
 
-        return !checkIsEmailDismissed(dismissedAt);
+        return !isEmailDismissed(dismissedAt);
       });
 
       if (nonDismissedEmails.length > 0) {

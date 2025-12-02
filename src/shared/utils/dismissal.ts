@@ -3,7 +3,7 @@
  * Pure functions for email dismissal logic
  */
 
-import { DISMISS_DURATION_HOURS, MS_PER_HOUR, DISMISS_DURATION_MS } from '../config/constants';
+import { MS_PER_HOUR, DISMISS_DURATION_MS } from '../config/constants';
 
 /**
  * Check if an email is currently dismissed (within 24h window)
@@ -12,9 +12,9 @@ export function isEmailDismissed(dismissedAt: number | undefined): boolean {
   if (!dismissedAt) return false;
 
   const now = Date.now();
-  const hoursSinceDismissed = (now - dismissedAt) / MS_PER_HOUR;
+  const timeSinceDismissed = now - dismissedAt;
 
-  return hoursSinceDismissed < DISMISS_DURATION_HOURS;
+  return timeSinceDismissed < DISMISS_DURATION_MS;
 }
 
 /**
@@ -42,3 +42,4 @@ export function getHoursSinceDismissed(dismissedAt: number): number {
   const now = Date.now();
   return (now - dismissedAt) / MS_PER_HOUR;
 }
+

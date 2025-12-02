@@ -11,13 +11,11 @@ function App() {
   const [show, setShow] = useState(false);
   const { emails, currentIssues, loading, dismissEmail, getDismissedUntil } = useEmails();
 
-  // Listen for EMAIL_DETECTED event to show modal
+  // Show modal when new issues are detected
   useEffect(() => {
-    function handleEmailDetected() {
+    if (currentIssues.length > 0) {
       setShow(true);
     }
-
-    handleEmailDetected();
   }, [currentIssues]);
 
   useEffect(() => {
