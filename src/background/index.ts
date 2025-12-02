@@ -1,19 +1,9 @@
-/**
- * Service Worker - Background Script
- * Handles message passing and centralized logic for email detection
- */
+import { processAllTextInBody } from '../shared';
+import { anonymizeText } from './utils/anonymization';
+import { STORAGE_KEY } from './config/constants';
+import { EmailEntry } from './entities/EmailEntry.entity';
 
 console.log('Service worker initialized');
-
-// Email detection regex
-const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-const STORAGE_KEY = 'detectionHistory';
-
-interface EmailEntry {
-  email: string;
-  timestamp: number;
-  dismissed?: number;
-}
 
 async function loadDetectionHistory(): Promise<EmailEntry[]> {
   const result = await chrome.storage.local.get(STORAGE_KEY);
@@ -50,19 +40,6 @@ async function logDetectedEmails(emails: string[]): Promise<string[]> {
   return normalizedEmails;
 }
 
-function anonymizeText(text: string): { anonymized: string; emails: string[] } {
-  const emails = new Set<string>();
-
-  const anonymized = text.replace(EMAIL_REGEX, (email) => {
-    const anonymizedEmail = `[EMAIL ADDRESS]`;
-    emails.add(email);
-
-    return anonymizedEmail;
-  });
-
-  return { anonymized, emails: Array.from(emails) };
-}
-
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   console.log('[SW] Received message:', message);
@@ -71,27 +48,41 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     // Handle async processing
     (async () => {
       try {
-        // REFACTOR: Extracting the prompt from the message
-        const body = JSON.parse(message.payload?.body) || message.payload?.body;
-        const parts = body?.messages?.[0]?.content?.parts;
-        console.log('PATS', parts, body);
-        const textPart = parts?.find((part: any) => typeof part === 'string');
-        console.log('[SW] Extracted prompt:', textPart);
+        const bodyString = message.payload?.body;
 
-        const { emails, anonymized } = anonymizeText(textPart);
+        if (!bodyString || typeof bodyString !== 'string') {
+          throw new Error('Invalid body - expected string');
+        }
 
-        console.log('[SW] Detection result:', { emails, anonymized });
+        // Collect all detected emails from all text parts
+        const allDetectedEmails: string[] = [];
 
-        // Log detected emails to history and get normalized list
+        // Process each text part in the body independently
+        const anonymizedBody = processAllTextInBody(bodyString, (text) => {
+          console.log('[SW] Processing text part:', text.substring(0, 100) + '...');
+
+          // Detect and anonymize emails in this text part
+          const { emails, anonymized } = anonymizeText(text);
+
+          // Collect emails from this part
+          if (emails.length > 0) {
+            allDetectedEmails.push(...emails);
+          }
+
+          return anonymized;
+        });
+
+        console.log('[SW] Total emails detected:', allDetectedEmails);
+
+        // Log all detected emails to history and get normalized list
         let detectedEmails: string[] = [];
-        if (emails.length > 0) {
-          detectedEmails = await logDetectedEmails(emails);
+        if (allDetectedEmails.length > 0) {
+          detectedEmails = await logDetectedEmails(allDetectedEmails);
         }
 
         sendResponse({
           emails: detectedEmails,
-          originalText: textPart,
-          anonymizedText: anonymized,
+          anonymizedBody: anonymizedBody, // Return full transformed body
         });
       } catch (error) {
         console.error('[SW] Error processing message:', error);
