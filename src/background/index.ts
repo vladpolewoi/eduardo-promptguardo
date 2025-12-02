@@ -1,44 +1,11 @@
 import { processAllTextInBody } from '../shared';
 import { anonymizeText } from './utils/anonymization';
-import { STORAGE_KEY } from './config/constants';
-import { EmailEntry } from './entities/EmailEntry.entity';
+import { EmailHistoryRepository } from './repositories/EmailHistoryRepository';
 
 console.log('Service worker initialized');
 
-async function loadDetectionHistory(): Promise<EmailEntry[]> {
-  const result = await chrome.storage.local.get(STORAGE_KEY);
-  return (result[STORAGE_KEY] as EmailEntry[]) || [];
-}
-
-async function logDetectedEmails(emails: string[]): Promise<string[]> {
-  const history = await loadDetectionHistory();
-  console.log('[SW] Current history length:', history.length);
-
-  const timestamp = Date.now();
-  const normalizedEmails: string[] = [];
-
-  // Log EVERY occurrence to history
-  emails.forEach((email) => {
-    const normalizedEmail = email.toLowerCase();
-
-    history.push({
-      email: normalizedEmail,
-      timestamp,
-    });
-
-    normalizedEmails.push(normalizedEmail);
-
-    console.log(`[SW] Email logged to history: ${email}`);
-  });
-
-  // Save updated history
-  if (normalizedEmails.length > 0) {
-    await chrome.storage.local.set({ [STORAGE_KEY]: history });
-    console.log('[SW] Total detections in history:', history.length);
-  }
-
-  return normalizedEmails;
-}
+// Initialize repository
+const emailHistoryRepository = new EmailHistoryRepository();
 
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -77,7 +44,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         // Log all detected emails to history and get normalized list
         let detectedEmails: string[] = [];
         if (allDetectedEmails.length > 0) {
-          detectedEmails = await logDetectedEmails(allDetectedEmails);
+          detectedEmails = await emailHistoryRepository.addEntries(allDetectedEmails);
         }
 
         sendResponse({
