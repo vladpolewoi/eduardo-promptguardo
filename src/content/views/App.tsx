@@ -9,13 +9,15 @@ import './App.css';
 
 function App() {
   const [show, setShow] = useState(false);
-  const { emails, currentIssues, loading } = useEmails();
+  const { emails, currentIssues, loading, dismissEmail, getDismissedUntil } = useEmails();
 
-  // Auto-show modal when emails are detected
+  // Listen for EMAIL_DETECTED event to show modal
   useEffect(() => {
-    if (currentIssues.length > 0) {
+    function handleEmailDetected() {
       setShow(true);
     }
+
+    handleEmailDetected();
   }, [currentIssues]);
 
   useEffect(() => {
@@ -122,9 +124,17 @@ function App() {
                         {currentIssues.map((email) => (
                           <div
                             key={email}
-                            className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                            className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors mb-2"
                           >
-                            <div className="font-mono text-xs">{email}</div>
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="font-mono text-xs flex-1">{email}</div>
+                              <button
+                                onClick={() => dismissEmail(email)}
+                                className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-background transition-colors"
+                              >
+                                Dismiss
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </ScrollArea>
@@ -150,21 +160,29 @@ function App() {
                         {emails
                           .slice()
                           .sort((a, b) => b.timestamp - a.timestamp)
-                          .map((entry) => (
-                            <div
-                              key={entry.email + entry.timestamp}
-                              className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="font-mono text-xs flex-1 break-all">
-                                  {entry.email}
-                                </div>
-                                <div className="text-xs text-muted-foreground whitespace-nowrap">
-                                  {formatDate(entry.timestamp)}
+                          .map((entry) => {
+                            const dismissedUntil = getDismissedUntil(entry.email);
+                            return (
+                              <div
+                                key={entry.email + entry.timestamp}
+                                className="p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors mb-2"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1">
+                                    <div className="font-mono text-sm break-all">{entry.email}</div>
+                                    {dismissedUntil && (
+                                      <div className="text-xs text-muted-foreground mt-1">
+                                        Dismissed until {formatDate(dismissedUntil.getTime())}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                    {formatDate(entry.timestamp)}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                       </ScrollArea>
                     </div>
                   )}
