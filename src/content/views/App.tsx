@@ -15,6 +15,7 @@ function App() {
 
   useEffect(() => {
     if (currentIssues.length > 0) {
+      // eslint-disable-next-line
       setShow(true);
     }
   }, [currentIssues]);
