@@ -21,10 +21,25 @@ export interface AnonymizationResponseMessage {
 export interface EmailDetectedEvent {
   emails: string[];
 }
+
+export interface AnalyzePromptMessage {
+  type: typeof MessageType.ANALYZE_PROMPT;
+  payload: {
+    body: string;
+  };
+}
+
+export interface AnalyzePromptResponse {
+  emails: string[];
+  anonymizedBody: string;
+}
 //---
 
 export type MessagePayloads = {
   [MessageType.CHATGPT_REQUEST]: ChatGPTRequestMessagePayload;
+  [MessageType.ANONYMIZATION_RESPONSE]: AnonymizationResponseMessage;
+  [MessageType.EMAIL_DETECTED]: EmailDetectedEvent;
+  [MessageType.ANALYZE_PROMPT]: AnalyzePromptMessage;
 };
 
 export type WindowMessage = {
