@@ -40,7 +40,7 @@ class AppBootstrap {
 
     chrome.runtime
       .sendMessage({
-        type: 'ANALYZE_PROMPT',
+        type: MessageType.ANALYZE_PROMPT,
         payload: { body },
       })
       .then((response) => {

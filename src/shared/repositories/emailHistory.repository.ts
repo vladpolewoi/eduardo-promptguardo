@@ -1,4 +1,6 @@
-import { STORAGE_KEY, DISMISSED_KEY, EmailEntry } from '@/shared';
+import { STORAGE_KEY, DISMISSED_KEY } from '../config/constants';
+import { isEmailDismissed } from '../utils/dismissal';
+import { EmailEntry } from '../entities/emailEntry.entity';
 
 export type DismissedEmails = Record<string, number>;
 
@@ -65,13 +67,10 @@ export class EmailHistoryRepository {
 
   async cleanExpiredDismissals(): Promise<DismissedEmails> {
     const dismissed = await this.loadDismissedEmails();
-    const now = Date.now();
     const cleaned: DismissedEmails = {};
 
     Object.entries(dismissed).forEach(([email, dismissedAt]) => {
-      const hoursSinceDismissed = (now - dismissedAt) / (1000 * 60 * 60);
-
-      if (hoursSinceDismissed < 24) {
+      if (isEmailDismissed(dismissedAt)) {
         cleaned[email] = dismissedAt;
       }
     });

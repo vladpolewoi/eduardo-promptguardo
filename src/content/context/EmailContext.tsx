@@ -1,10 +1,13 @@
-import { createContext, useContext, useCallback, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import {
   MessageType,
   type EmailEntry,
   STORAGE_KEY,
   EmailHistoryRepository,
   type DismissedEmails,
+  DISMISS_DURATION_MS,
+  isEmailDismissed as checkIsEmailDismissed,
+  getDismissedUntil as getEmailDismissedUntil,
 } from '@/shared';
 import { type EmailDetectedEvent } from '@/shared/types/messages';
 
@@ -19,7 +22,6 @@ interface EmailContextType {
 
 const EmailContext = createContext<EmailContextType | undefined>(undefined);
 
-// Initialize repository
 const repository = new EmailHistoryRepository();
 
 export function EmailProvider({ children }: { children: ReactNode }) {
@@ -28,38 +30,16 @@ export function EmailProvider({ children }: { children: ReactNode }) {
   const [dismissedEmails, setDismissedEmails] = useState<DismissedEmails>({});
   const [loading, setLoading] = useState(true);
 
-  // Helper function to check if email is dismissed and within 24h
-  const isEmailDismissed = useCallback(
-    (email: string): boolean => {
-      const dismissedAt = dismissedEmails[email.toLowerCase()];
-      if (!dismissedAt) return false;
+  // Wrapper functions that use pure utilities
+  const isEmailDismissed = (email: string): boolean => {
+    const dismissedAt = dismissedEmails[email.toLowerCase()];
+    return checkIsEmailDismissed(dismissedAt);
+  };
 
-      const now = Date.now();
-      const hoursSinceDismissed = (now - dismissedAt) / (1000 * 60 * 60);
-
-      return hoursSinceDismissed < 24;
-    },
-    [dismissedEmails],
-  );
-
-  // Helper function to get when a dismissed email will expire
-  const getDismissedUntil = useCallback(
-    (email: string): Date | null => {
-      const dismissedAt = dismissedEmails[email.toLowerCase()];
-      if (!dismissedAt) return null;
-
-      const expiresAt = dismissedAt + 24 * 60 * 60 * 1000; // 24 hours in ms
-      const now = Date.now();
-
-      // Only return if still within dismiss window
-      if (expiresAt > now) {
-        return new Date(expiresAt);
-      }
-
-      return null;
-    },
-    [dismissedEmails],
-  );
+  const getDismissedUntil = (email: string): Date | null => {
+    const dismissedAt = dismissedEmails[email.toLowerCase()];
+    return getEmailDismissedUntil(dismissedAt);
+  };
 
   // Initial load - runs once on mount
   useEffect(() => {
@@ -69,9 +49,8 @@ export function EmailProvider({ children }: { children: ReactNode }) {
 
       setEmails(detectionHistory);
       setDismissedEmails(cleanedDismissed);
+
       setLoading(false);
-      console.log('[EmailContext] Loaded detection history:', detectionHistory.length);
-      console.log('[EmailContext] Loaded dismissed emails:', Object.keys(cleanedDismissed).length);
     };
 
     loadInitialData();
@@ -143,7 +122,7 @@ export function EmailProvider({ children }: { children: ReactNode }) {
     // Remove from current issues
     setCurrentIssues((current) => current.filter((e) => e.toLowerCase() !== normalizedEmail));
 
-    console.log(`[EmailContext] Dismissed ${email} until`, new Date(now + 24 * 60 * 60 * 1000));
+    console.log(`[EmailContext] Dismissed ${email} until`, new Date(now + DISMISS_DURATION_MS));
   };
 
   const value: EmailContextType = {
