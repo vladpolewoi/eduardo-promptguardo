@@ -1,5 +1,11 @@
 import { createContext, useContext, useCallback, useState, useEffect, ReactNode } from 'react';
-import { MessageType, type EmailEntry } from '@/shared';
+import {
+  MessageType,
+  type EmailEntry,
+  STORAGE_KEY,
+  EmailHistoryRepository,
+  type DismissedEmails,
+} from '@/shared';
 import { type EmailDetectedEvent } from '@/shared/types/messages';
 
 interface EmailContextType {
@@ -13,11 +19,8 @@ interface EmailContextType {
 
 const EmailContext = createContext<EmailContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'detectionHistory';
-const DISMISSED_KEY = 'dismissedEmails';
-
-// Dismissed emails structure: { email: timestamp }
-type DismissedEmails = Record<string, number>;
+// Initialize repository
+const repository = new EmailHistoryRepository();
 
 export function EmailProvider({ children }: { children: ReactNode }) {
   const [emails, setEmails] = useState<EmailEntry[]>([]);
@@ -58,39 +61,11 @@ export function EmailProvider({ children }: { children: ReactNode }) {
     [dismissedEmails],
   );
 
-  // Helper function to clean expired dismissed emails
-  const cleanExpiredDismissals = useCallback(
-    async (dismissed: DismissedEmails): Promise<DismissedEmails> => {
-      const now = Date.now();
-      const cleaned: DismissedEmails = {};
-
-      Object.entries(dismissed).forEach(([email, dismissedAt]) => {
-        const hoursSinceDismissed = (now - dismissedAt) / (1000 * 60 * 60);
-        if (hoursSinceDismissed < 24) {
-          cleaned[email] = dismissedAt;
-        }
-      });
-
-      return cleaned;
-    },
-    [],
-  );
-
   // Initial load - runs once on mount
   useEffect(() => {
     const loadInitialData = async () => {
-      const result = (await chrome.storage.local.get([STORAGE_KEY, DISMISSED_KEY])) as {
-        detectionHistory: EmailEntry[];
-        dismissedEmails: DismissedEmails;
-      };
-      const detectionHistory = result.detectionHistory || [];
-      const dismissed = result.dismissedEmails || {};
-
-      // Clean expired dismissals
-      const cleanedDismissed = await cleanExpiredDismissals(dismissed);
-      if (Object.keys(cleanedDismissed).length !== Object.keys(dismissed).length) {
-        await chrome.storage.local.set({ [DISMISSED_KEY]: cleanedDismissed });
-      }
+      const detectionHistory = await repository.loadHistory();
+      const cleanedDismissed = await repository.cleanExpiredDismissals();
 
       setEmails(detectionHistory);
       setDismissedEmails(cleanedDismissed);
@@ -100,7 +75,7 @@ export function EmailProvider({ children }: { children: ReactNode }) {
     };
 
     loadInitialData();
-  }, [cleanExpiredDismissals]);
+  }, []);
 
   // listen for storage changes from service worker
   useEffect(() => {
@@ -155,15 +130,14 @@ export function EmailProvider({ children }: { children: ReactNode }) {
     const normalizedEmail = email.toLowerCase();
     const now = Date.now();
 
+    // Dismiss via repository
+    await repository.dismissEmail(email);
+
+    // Update state
     const updatedDismissed = {
       ...dismissedEmails,
       [normalizedEmail]: now,
     };
-
-    // Update storage
-    await chrome.storage.local.set({ [DISMISSED_KEY]: updatedDismissed });
-
-    // Update state
     setDismissedEmails(updatedDismissed);
 
     // Remove from current issues

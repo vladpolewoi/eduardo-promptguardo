@@ -1,6 +1,5 @@
-import { processAllTextInBody } from '@/shared';
+import { processAllTextInBody, EmailHistoryRepository } from '@/shared';
 import { anonymizeText } from '../utils/anonymization';
-import { EmailHistoryRepository } from '../repositories/EmailHistoryRepository';
 
 export interface AnalyzePromptPayload {
   body: string;

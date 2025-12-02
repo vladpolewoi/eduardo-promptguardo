@@ -1,6 +1,6 @@
-import { MessageType, AnalyzePromptResponse } from '@/shared/types/messages';
+import { MessageType, EmailHistoryRepository } from '@/shared';
+import type { AnalyzePromptResponse } from './services/EmailDetectionService';
 
-import { EmailHistoryRepository } from './repositories/EmailHistoryRepository';
 import { EmailDetectionService, AnalyzePromptPayload } from './services/EmailDetectionService';
 
 const emailHistoryRepository = new EmailHistoryRepository();
