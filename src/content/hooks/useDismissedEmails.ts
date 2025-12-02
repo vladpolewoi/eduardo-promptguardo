@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { EmailHistoryRepository, type DismissedEmails } from '@/shared/repositories';
 import {
-  EmailHistoryRepository,
-  type DismissedEmails,
   isEmailDismissed as checkIsEmailDismissed,
   getDismissedUntil as getEmailDismissedUntil,
-} from '@/shared';
+} from '@/shared/utils';
 
 const repository = new EmailHistoryRepository();
 

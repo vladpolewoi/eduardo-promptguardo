@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { EmailHistoryRepository, STORAGE_KEY, type EmailEntry } from '@/shared';
+import { EmailHistoryRepository } from '@/shared/repositories';
+import { STORAGE_KEY } from '@/shared/config';
+import type { EmailEntry } from '@/shared/entities';
 
 const repository = new EmailHistoryRepository();
 

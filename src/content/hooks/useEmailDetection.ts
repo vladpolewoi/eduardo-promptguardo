@@ -1,10 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  MessageType,
-  type DismissedEmails,
-  isEmailDismissed as checkIsEmailDismissed,
-} from '@/shared';
-import { type EmailDetectedEvent } from '@/shared/types/messages';
+import { MessageType, type EmailDetectedEvent } from '@/shared/types';
+import { type DismissedEmails } from '@/shared/repositories';
+import { isEmailDismissed as checkIsEmailDismissed } from '@/shared/utils';
 
 export function useEmailDetection(dismissedEmails: DismissedEmails) {
   const [currentIssues, setCurrentIssues] = useState<string[]>([]);

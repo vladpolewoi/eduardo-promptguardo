@@ -1,4 +1,5 @@
-import { MessageType, EmailHistoryRepository } from '@/shared';
+import { MessageType } from '@/shared/types';
+import { EmailHistoryRepository } from '@/shared/repositories';
 import type { AnalyzePromptResponse } from './services/EmailDetectionService';
 
 import { EmailDetectionService, AnalyzePromptPayload } from './services/EmailDetectionService';

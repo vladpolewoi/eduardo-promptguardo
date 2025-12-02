@@ -1,4 +1,4 @@
-import { MessageType } from '../../shared';
+import { MessageType } from './../../shared/types';
 
 type SomeUrl = string | URL | Request;
 

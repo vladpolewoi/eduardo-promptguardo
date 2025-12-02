@@ -1,5 +1,5 @@
 import { createContext, useContext, ReactNode } from 'react';
-import type { EmailEntry } from '@/shared';
+import type { EmailEntry } from '@/shared/entities';
 import { useEmailHistory } from '../hooks/useEmailHistory';
 import { useDismissedEmails } from '../hooks/useDismissedEmails';
 import { useEmailDetection } from '../hooks/useEmailDetection';
