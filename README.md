@@ -11,6 +11,20 @@ A Chrome extension that monitors and anonymizes email addresses in ChatGPT promp
 - ⏰ **Dismiss System**: Dismiss emails for 24 hours to avoid repeated alerts
 - 🎨 **Modern UI**: Built with React, TypeScript, and shadcn/ui components
 
+## Demo
+
+### Demo 1: Issues Found Tab
+![Demo 1 - Issues Found Tab](./docs/demo1.png)
+*The modal showing detected email addresses in the "Issues Found" tab*
+
+### Demo 2: History Tab
+![Demo 2 - History Tab](./docs/demo2.png)
+*Viewing all previously detected emails in the "History" tab*
+
+### Demo 3: Email Detection in Action
+![Demo 3 - Email Detection](./docs/demo3.png)
+*The extension automatically detecting and anonymizing emails in ChatGPT prompts*
+
 ## Installation
 
 ### Development Setup

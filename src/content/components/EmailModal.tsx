@@ -14,7 +14,7 @@ export function EmailModal({ onClose, issuesTab, historyTab }: EmailModalProps) 
   return (
     <div className="modal-backdrop fixed inset-0 z-[10001] bg-black/50" onClick={onClose}>
       <Card
-        className="bg-secondary border-border modal-card fixed bottom-24 right-6 w-[560px] min-h-[600px] max-h-[600px] flex flex-col shadow-xl"
+        className="bg-secondary border-border modal-card fixed bottom-24 right-6 w-[90%] max-w-[560px] min-w-[320px] mx-auto min-h-[600px] max-h-[600px] flex flex-col shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <CardHeader>
